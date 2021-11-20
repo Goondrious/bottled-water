@@ -127,7 +127,7 @@ export default function Home({ mdContent }) {
             </CardFooter>
           </Card>
         </div>
-        <Modal size="sm" active={showModal(modalState)} toggler={() => setModalState("")}>
+        <Modal size="lg" active={showModal(modalState)} toggler={() => setModalState("")}>
           <ModalHeader toggler={() => setModalState("")}>{getModalHeader(modalState)}</ModalHeader>
           <ModalBody>
             <div className="prose">

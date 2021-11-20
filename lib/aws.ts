@@ -14,9 +14,12 @@ const streamToString = (stream) =>
 export const getStaticS3Content = async () => {
   // Create an Amazon S3 service client object.
   const s3Client = new S3Client({
-    region: process.env.AWS_REGION,
+    region: process.env.MY_AWS_REGION,
+    credentials: {
+      accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY,
+    },
   })
-  console.log(process.env.AWS_ACCESS_KEY_ID, process.env.AWS_SECRET_ACCESS_KEY)
 
   const mdContent = await Promise.all(
     ["thoughts.md", "info.md"].map(
