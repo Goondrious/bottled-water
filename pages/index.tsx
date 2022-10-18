@@ -20,10 +20,10 @@ import CardFooter from "@material-tailwind/react/CardFooter"
 import H6 from "@material-tailwind/react/Heading6"
 import Paragraph from "@material-tailwind/react/Paragraph"
 
-import { getStaticS3Content } from "../lib/aws"
+import { getStaticHomePageContent } from "../lib/aws"
 
 export async function getStaticProps() {
-  const { mdContent } = await getStaticS3Content()
+  const { mdContent } = await getStaticHomePageContent()
   return {
     props: {
       mdContent,
@@ -135,39 +135,21 @@ export default function Home({ mdContent }) {
               {modalState === "info" && <div dangerouslySetInnerHTML={{ __html: mdContent[1] }} />}
               {modalState === "movement" && (
                 <div>
-                  <p>There isn't really any movement. Maybe to come:</p>
-                  <div className="flex flex-wrap justify-evenly p-2">
-                    <div className="border rounded-full py-1 px-3 mb-2 font-bold">Automated Email Campaigns</div>
-                    <div className="border rounded-full py-1 px-3 mb-2 font-bold" color="blueGray">
-                      Merchandise (bottle, t-shirts etc.)
-                    </div>
-                    <div className="border rounded-full py-1 px-3 mb-2 font-bold" color="blueGray">
-                      An NFT
-                    </div>
-                    <div className="border rounded-full py-1 px-3 mb-2 font-bold" color="blueGray">
-                      Water Quality Resources
-                    </div>
-                  </div>
                   <p>
-                    If you are inclined to post on the internet or to march places and yell things, might I suggest:
+                    There isn't really any movement, from this site anyways. I did, however, think of these slogans:
                   </p>
                   <div className="flex flex-col items-center p-2">
-                    <div className="mb-2">
-                      <Icon size="sm" name="chevron_right" />
-                      NoExcuseForSingleUse
-                    </div>
-                    <div className="mb-2">
-                      <Icon size="sm" name="chevron_right" />
-                      RefillNotLandfill
-                    </div>
-                    <div className="mb-2">
-                      <Icon size="sm" name="chevron_right" />
-                      ThrottleTheBottle
-                    </div>
-                    <div className="mb-2">
-                      <Icon size="sm" name="chevron_right" />
-                      WhatAThrillWhenWeRefill
-                    </div>
+                    {[
+                      "No Excuse For Single Use",
+                      "Refill Not Landfill",
+                      "Throttle The Bottle",
+                      "What A Thrill When We Refill",
+                    ].map((o) => (
+                      <div className="flex items-center mb-2">
+                        <Icon size="md" name="chevron_right" />
+                        {o}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
