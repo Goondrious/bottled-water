@@ -67,7 +67,7 @@ const OBJECT_ADD_TIME = 400
 const REUSABLE_SCORE = 20
 const PLASTIC_SCORE = -10
 const FUCK_NESTLE_DURATION = 4000
-const FUCK_NESTLE_SPAWN_TIME = 2000
+const FUCK_NESTLE_SPAWN_TIME = 4000
 const FUCK_NESTLE_SPEED = 0.12
 const BOTTLE_THRESHOLD = 0.3
 
@@ -164,65 +164,68 @@ export default () => {
         }))
         .filter((o) => o.opacity > 0)
 
-      // move objects
-      let objects = Object.entries(state.objects).reduce((agg, ele: any) => {
-        const [key, value] = ele
-        const { bottle, direction, top: oldTop, left: oldLeft } = value
+      let { objects, lastObjectAddTime } = state
 
-        const vector = VECTORS[direction]
-        const speed = bottle === Bottle.FUCK_NESTLE ? state.knobs.fuckNestleSpeed : state.knobs.objectSpeed
-        const left = speed * vector[0] + oldLeft
-        const top = speed * vector[1] + oldTop
-        if (left > -20 && left < 110 && top > -20 && top < 110) {
-          agg[key] = {
-            ...value,
-            top,
-            left,
+      if (!fuckNestle) {
+        // move objects
+        objects = Object.entries(state.objects).reduce((agg, ele: any) => {
+          const [key, value] = ele
+          const { bottle, direction, top: oldTop, left: oldLeft } = value
+
+          const vector = VECTORS[direction]
+          const speed = bottle === Bottle.FUCK_NESTLE ? state.knobs.fuckNestleSpeed : state.knobs.objectSpeed
+          const left = speed * vector[0] + oldLeft
+          const top = speed * vector[1] + oldTop
+          if (left > -20 && left < 110 && top > -20 && top < 110) {
+            agg[key] = {
+              ...value,
+              top,
+              left,
+            }
           }
-        }
-        return agg
-      }, {})
+          return agg
+        }, {})
 
-      // add objects
-      let { lastObjectAddTime } = state
-      if (!state.fuckNestle && Date.now() - lastObjectAddTime > OBJECT_ADD_TIME) {
-        let left, top
+        // add objects
+        if (!state.fuckNestle && Date.now() - lastObjectAddTime > OBJECT_ADD_TIME) {
+          let left, top
 
-        // roll for starting placement
-        if ([Direction.UP, Direction.DOWN].includes(state.direction)) {
-          const idx = Math.floor(Math.random() * state.placementOptions.length)
-          left = state.placementOptions[idx] + (Math.random() >= 0.5 ? -3 : 3)
-          placementOptions = [...state.placementOptions.slice(0, idx), ...state.placementOptions.slice(idx + 1)]
-          top = state.direction === Direction.UP ? 105 : -10
-        } else {
-          const idx = Math.floor(Math.random() * state.placementOptions.length)
-          placementOptions = [...state.placementOptions.slice(0, idx), ...state.placementOptions.slice(idx + 1)]
-          top = state.placementOptions[idx] + (Math.random() >= 0.5 ? -3 : 3)
-          left = state.direction === Direction.LEFT ? 105 : -10
-        }
-        if (placementOptions.length === 0) {
-          placementOptions = AXIS_PLACEMENTS
-        }
+          // roll for starting placement
+          if ([Direction.UP, Direction.DOWN].includes(state.direction)) {
+            const idx = Math.floor(Math.random() * state.placementOptions.length)
+            left = state.placementOptions[idx] + (Math.random() >= 0.5 ? -3 : 3)
+            placementOptions = [...state.placementOptions.slice(0, idx), ...state.placementOptions.slice(idx + 1)]
+            top = state.direction === Direction.UP ? 105 : -10
+          } else {
+            const idx = Math.floor(Math.random() * state.placementOptions.length)
+            placementOptions = [...state.placementOptions.slice(0, idx), ...state.placementOptions.slice(idx + 1)]
+            top = state.placementOptions[idx] + (Math.random() >= 0.5 ? -3 : 3)
+            left = state.direction === Direction.LEFT ? 105 : -10
+          }
+          if (placementOptions.length === 0) {
+            placementOptions = AXIS_PLACEMENTS
+          }
 
-        let bottle = Math.random() >= state.knobs.bottleThreshold ? Bottle.REUSABLE : Bottle.PLASTIC
+          let bottle = Math.random() >= state.knobs.bottleThreshold ? Bottle.REUSABLE : Bottle.PLASTIC
 
-        if (Date.now() - fuckNestleSpawnTimerStart > state.knobs.fuckNestleSpawnTime) {
-          fuckNestleSpawnTimerStart = Date.now()
-          bottle = Bottle.FUCK_NESTLE
-        }
+          if (Date.now() - fuckNestleSpawnTimerStart > state.knobs.fuckNestleSpawnTime) {
+            fuckNestleSpawnTimerStart = Date.now()
+            bottle = Bottle.FUCK_NESTLE
+          }
 
-        lastObjectAddTime = Date.now()
-        objects = {
-          ...state.objects,
-          [Date.now()]: {
-            id: Date.now(),
-            left,
-            top,
-            placementOptions,
-            direction: state.direction,
-            fuckNestleSpawnTimerStart,
-            bottle,
-          },
+          lastObjectAddTime = Date.now()
+          objects = {
+            ...state.objects,
+            [Date.now()]: {
+              id: Date.now(),
+              left,
+              top,
+              placementOptions,
+              direction: state.direction,
+              fuckNestleSpawnTimerStart,
+              bottle,
+            },
+          }
         }
       }
 
@@ -248,7 +251,9 @@ export default () => {
           ...state,
           fuckNestle: true,
           fuckNestleTimerStart: Date.now(),
-          objects: {},
+          objects: Object.entries(state.objects)
+            .filter(([, v]) => v.bottle !== Bottle.FUCK_NESTLE)
+            .reduce((agg, o) => ({ ...agg, [o[0]]: o[1] }), {}),
         }
       }
 
@@ -401,7 +406,7 @@ export default () => {
           ) : (
             Object.values(gameState.objects).map((o: any) => (
               <button
-                onClick={handleOnObjectClick(o.id)}
+                onPointerDown={handleOnObjectClick(o.id)}
                 style={{
                   left: o.left + "%",
                   top: o.top + "%",
