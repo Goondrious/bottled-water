@@ -53,11 +53,37 @@ type GameState = {
   timer?: any
   lastObjectAddTime?: any
   placementOptions: number[]
+  knobs: any
 }
 
 const AXIS_PLACEMENTS = [12, 20, 30, 40, 50, 60, 70, 80]
 
+const TIME = 20000
+const TICK_TIME = 15
+const DIRECTION_TIMER_CHANGE = 3001
+const OBJECT_SPEED = 0.2
+const OBJECT_ADD_TIME = 400
+const REUSABLE_SCORE = 20
+const PLASTIC_SCORE = -10
+const FUCK_NESTLE_DURATION = 4000
+const FUCK_NESTLE_SPAWN_TIME = 2000
+const FUCK_NESTLE_SPEED = 0.12
+const BOTTLE_THRESHOLD = 0.3
+
 const BLANK_STATE: GameState = {
+  knobs: {
+    time: TIME,
+    tickTime: TICK_TIME,
+    directionTimerChange: DIRECTION_TIMER_CHANGE,
+    objectSpeed: OBJECT_SPEED,
+    objectAddTime: OBJECT_ADD_TIME,
+    reusableScore: REUSABLE_SCORE,
+    plasticScore: PLASTIC_SCORE,
+    fuckNestleDuration: FUCK_NESTLE_DURATION,
+    fuckNestleSpawnTime: FUCK_NESTLE_SPAWN_TIME,
+    fuckNestleSpeed: FUCK_NESTLE_SPEED,
+    bottleThreshold: BOTTLE_THRESHOLD,
+  },
   playing: false,
   gameStartTime: Date.now(),
   score: 0,
@@ -75,24 +101,12 @@ const BLANK_STATE: GameState = {
   placementOptions: AXIS_PLACEMENTS,
 }
 
-const TIME = 20000
-const TICK_TIME = 20
-const DIRECTION_TIMER_CHANGE = 3001
-const OBJECT_SPEED = 0.08
-const OBJECT_ADD_TIME = 600
-const REUSABLE_SCORE = 10
-const PLASTIC_SCORE = -10
-const FUCK_NESTLE_DURATION = 4000
-const FUCK_NESTLE_SPAWN_TIME = 3000
-const FUCK_NESTLE_SPEED = 0.15
-const BOTTLE_THRESHOLD = 0.3
-
 export default () => {
   /*
     TODO
     - color coding for images
     - different patterns for direction change
-    - normalize speed
+    - normalize speed to screen size
   */
   const gameTick = useCallback(() => {
     dispatch({ type: "tick" })
@@ -102,7 +116,7 @@ export default () => {
     if (state.playing && type === "tick") {
       let { directionTimerStart, direction, placementOptions, gameStartTime } = state
 
-      if (Date.now() - gameStartTime > TIME) {
+      if (Date.now() - gameStartTime > state.knobs.time) {
         // end game
         clearInterval(state.timer)
         return {
@@ -120,7 +134,7 @@ export default () => {
       }
 
       // direction change
-      if (Date.now() - directionTimerStart >= DIRECTION_TIMER_CHANGE) {
+      if (Date.now() - directionTimerStart >= state.knobs.directionTimerChange) {
         directionTimerStart = Date.now()
         direction = getNextDirection(direction)
         placementOptions = AXIS_PLACEMENTS
@@ -128,7 +142,8 @@ export default () => {
 
       // end fuckNestle
       let { fuckNestle, fuckNestleTimerStart, fuckNestleSpawnTimerStart } = state
-      if (fuckNestle && Date.now() - state.fuckNestleTimerStart > FUCK_NESTLE_DURATION) {
+      if (fuckNestle && Date.now() - state.fuckNestleTimerStart > state.knobs.fuckNestleDuration) {
+        console.log("====> ending F*** nestle")
         fuckNestle = false
         fuckNestleTimerStart = Date.now()
         fuckNestleSpawnTimerStart = Date.now()
@@ -155,7 +170,7 @@ export default () => {
         const { bottle, direction, top: oldTop, left: oldLeft } = value
 
         const vector = VECTORS[direction]
-        const speed = bottle === Bottle.FUCK_NESTLE ? FUCK_NESTLE_SPEED : OBJECT_SPEED
+        const speed = bottle === Bottle.FUCK_NESTLE ? state.knobs.fuckNestleSpeed : state.knobs.objectSpeed
         const left = speed * vector[0] + oldLeft
         const top = speed * vector[1] + oldTop
         if (left > -20 && left < 110 && top > -20 && top < 110) {
@@ -189,9 +204,10 @@ export default () => {
           placementOptions = AXIS_PLACEMENTS
         }
 
-        let bottle = Math.random() >= BOTTLE_THRESHOLD ? Bottle.REUSABLE : Bottle.PLASTIC
+        let bottle = Math.random() >= state.knobs.bottleThreshold ? Bottle.REUSABLE : Bottle.PLASTIC
 
-        if (Date.now() - fuckNestleSpawnTimerStart > FUCK_NESTLE_SPAWN_TIME) {
+        if (Date.now() - fuckNestleSpawnTimerStart > state.knobs.fuckNestleSpawnTime) {
+          console.log("====> adding f*** nestle")
           fuckNestleSpawnTimerStart = Date.now()
           bottle = Bottle.FUCK_NESTLE
         }
@@ -237,7 +253,7 @@ export default () => {
         }
       }
 
-      const thisScore = bottle === Bottle.REUSABLE ? REUSABLE_SCORE : PLASTIC_SCORE
+      const thisScore = bottle === Bottle.REUSABLE ? state.knobs.reusableScore : state.knobs.plasticScore
       let { score } = state
       score += thisScore
       const { left, top } = state.objects[payload]
@@ -282,14 +298,23 @@ export default () => {
     }
 
     if (type === "bonus") {
-      const score = state.score + REUSABLE_SCORE * 2
+      const score = state.score + state.knobs.reusableScore * 2
       return {
         ...state,
         score,
-        scores: [...state.scores, { id: Date.now(), score: REUSABLE_SCORE * 2, left: -10, opacity: 1 }],
+        scores: [...state.scores, { id: Date.now(), score: state.knobs.reusableScore * 2, left: -10, opacity: 1 }],
       }
     }
 
+    if (type === "knob") {
+      return {
+        ...state,
+        knobs: {
+          ...state.knobs,
+          [payload.knob]: payload.value,
+        },
+      }
+    }
     return state
   }, BLANK_STATE)
 
@@ -297,16 +322,32 @@ export default () => {
   const handleOnBonusClick = () => dispatch({ type: "bonus" })
   const handleOnObjectClick = (id) => () => dispatch({ type: "removeObject", payload: id })
 
+  console.log("====> ", gameState.objects)
   return (
     <div className="flex flex-col items-center justify-center">
       <Button onClick={handleOnGameStart}>{gameState.playing ? "Stop" : "Start"}</Button>
-      <div className="flex">
+      <div className="flex justify-center text-center">
         High Score: {gameState.highscore || "-"}{" "}
         {gameState.newHighScore && <Label color="green">New High Score!</Label>}
       </div>
       <div className="flex">
         <div className="p-1">Time: {gameState.playing ? getTimeInSeconds(TIME, gameState.gameStartTime) : 0}</div>
         <div className="p-1">Score: {gameState.score}</div>
+      </div>
+      <div>
+        Knobs
+        {[{ key: "objectSpeed", name: "Object Speed" }].map((o) => (
+          <div>
+            {o.name}
+            <input
+              type="number"
+              step="0.01"
+              value={gameState.knobs[o.key]}
+              onChange={(e) => dispatch({ type: "knob", payload: { knob: o.key, value: e.target.value } })}
+              key={o.key}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="w-full md:w-1/2 h-screen m-2">
@@ -328,7 +369,9 @@ export default () => {
               >
                 <img className="h-full m-0" src={`${Bottle.REUSABLE}-bottle.png`} />
               </Button>
-              <Label color="blueGray">{getTimeInSeconds(FUCK_NESTLE_DURATION, gameState.fuckNestleTimerStart)}</Label>
+              <Label color="blueGray">
+                {getTimeInSeconds(gameState.knobs.fuckNestleDuration, gameState.fuckNestleTimerStart)}
+              </Label>
               <div className="relative max-w-full">
                 {gameState.scores.map(({ id, score, left, opacity }) => (
                   <div
