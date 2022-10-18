@@ -5,6 +5,7 @@ import { getTimeInSeconds } from "../lib/time"
 import H1 from "@material-tailwind/react/Heading6"
 import Button from "@material-tailwind/react/Button"
 import Label from "@material-tailwind/react/Label"
+import ScoreHint from "./score-hint"
 
 enum Bottle {
   PLASTIC,
@@ -59,7 +60,7 @@ type GameState = {
 const AXIS_PLACEMENTS = [12, 20, 30, 40, 50, 60, 70, 80]
 
 const TIME = 20000
-const TICK_TIME = 15
+const TICK_TIME = 50
 const DIRECTION_TIMER_CHANGE = 3001
 const OBJECT_SPEED = 0.2
 const OBJECT_ADD_TIME = 400
@@ -143,7 +144,6 @@ export default () => {
       // end fuckNestle
       let { fuckNestle, fuckNestleTimerStart, fuckNestleSpawnTimerStart } = state
       if (fuckNestle && Date.now() - state.fuckNestleTimerStart > state.knobs.fuckNestleDuration) {
-        console.log("====> ending F*** nestle")
         fuckNestle = false
         fuckNestleTimerStart = Date.now()
         fuckNestleSpawnTimerStart = Date.now()
@@ -207,7 +207,6 @@ export default () => {
         let bottle = Math.random() >= state.knobs.bottleThreshold ? Bottle.REUSABLE : Bottle.PLASTIC
 
         if (Date.now() - fuckNestleSpawnTimerStart > state.knobs.fuckNestleSpawnTime) {
-          console.log("====> adding f*** nestle")
           fuckNestleSpawnTimerStart = Date.now()
           bottle = Bottle.FUCK_NESTLE
         }
@@ -322,34 +321,46 @@ export default () => {
   const handleOnBonusClick = () => dispatch({ type: "bonus" })
   const handleOnObjectClick = (id) => () => dispatch({ type: "removeObject", payload: id })
 
-  console.log("====> ", gameState.objects)
   return (
     <div className="flex flex-col items-center justify-center">
-      <Button onClick={handleOnGameStart}>{gameState.playing ? "Stop" : "Start"}</Button>
-      <div className="flex justify-center text-center">
-        High Score: {gameState.highscore || "-"}{" "}
-        {gameState.newHighScore && <Label color="green">New High Score!</Label>}
-      </div>
-      <div className="flex">
-        <div className="p-1">Time: {gameState.playing ? getTimeInSeconds(TIME, gameState.gameStartTime) : 0}</div>
-        <div className="p-1">Score: {gameState.score}</div>
-      </div>
-      <div>
-        Knobs
-        {[{ key: "objectSpeed", name: "Object Speed" }].map((o) => (
-          <div>
-            {o.name}
+      <div className="w-1/3">
+        <div className="font-medium text-md"> Knobs</div>
+        {[
+          { key: "objectSpeed", name: "Object Speed", step: 0.1 },
+          { key: "objectAddTime", name: "Object Add Time", step: 100 },
+          { key: "directionTimerChange", name: "Direction Change Time", step: 1000 },
+        ].map((o) => (
+          <div key={o.key} className="flex justify-between text-small font-light">
+            <div>{o.name}</div>
             <input
               type="number"
-              step="0.01"
+              step={o.step}
               value={gameState.knobs[o.key]}
               onChange={(e) => dispatch({ type: "knob", payload: { knob: o.key, value: e.target.value } })}
               key={o.key}
+              className="w-[80px]"
             />
           </div>
         ))}
       </div>
 
+      <div className="flex text-center p-1">
+        <div className="flex justify-between items-center flex-shrink-0 p-1">
+          <div className="font-medium text-md">High Score:</div>&nbsp;{gameState.highscore || "-"}
+        </div>
+        {gameState.newHighScore && <Label color="green">New High Score!</Label>}
+      </div>
+      <div className="flex">
+        <div className="p-1 flex">
+          <div className="font-medium text-md">Time:</div>&nbsp;
+          {gameState.playing ? getTimeInSeconds(TIME, gameState.gameStartTime) : 0}
+        </div>
+        <div className="p-1 flex">
+          <div className="font-medium text-md">Score:</div>&nbsp;{gameState.score}
+        </div>
+      </div>
+      <Button onClick={handleOnGameStart}>{gameState.playing ? "Stop" : "Start"}</Button>
+      <ScoreHint />
       <div className="w-full md:w-1/2 h-screen m-2">
         <div className="p-4 h-3/5 border rounded-xl relative overflow-hidden">
           {!gameState.playing && gameState.highscore !== null && (
@@ -380,7 +391,7 @@ export default () => {
                       left,
                       opacity,
                     }}
-                    className="absolute"
+                    className="absolute w-[50px]"
                   >
                     <Label color="blue">+{score}</Label>
                   </div>
@@ -405,7 +416,7 @@ export default () => {
                 key={o.id}
               >
                 {o.bottle === Bottle.FUCK_NESTLE ? (
-                  <div className="flex flex-col items-center border rounded-full bg-red-50 p-4 text-xl font-extrabold	text-red-700">
+                  <div className="flex flex-col items-center border rounded-full bg-red-50 p-4 text-xl font-extrabold	text-green-700">
                     <div>F**k</div>
                     <div>Nestle!</div>
                   </div>
@@ -423,7 +434,7 @@ export default () => {
                 top: top + "%",
                 opacity,
               }}
-              className="absolute"
+              className="absolute w-[50px]"
             >
               <Label color={score > 0 ? "blue" : "red"}>
                 {score > 0 && "+"}
