@@ -5,6 +5,7 @@ import { getTimeInSeconds } from "../lib/time"
 import Button from "@material-tailwind/react/Button"
 import Progress from "@material-tailwind/react/Progress"
 import Label from "@material-tailwind/react/Label"
+import ScoreHint from "./score-hint"
 
 enum Bottle {
   PLASTIC,
@@ -24,9 +25,31 @@ type HydrationGameState = {
   timer?: any
   ticksSinceChange: number
   scores: any[]
+  knobs: any
 }
 
+const TIME = 20000 // starting amount of time
+const TICK = 50 // how often to apply a tick
+const HYDRATION = 100
+const DRINK_HYDRATION_RATE = 10
+const DEHYDRATION_RATE = 0.1
+const REUSABLE_SCORE = 10
+const PLASTIC_SCORE = -10
+const MINIMUM_TICKS_TO_CHANGE = 40
+const CHANGE_RATE = 0.03
+
 const BLANK_STATE: HydrationGameState = {
+  knobs: {
+    time: TIME,
+    tickTime: TICK,
+    reusableScore: REUSABLE_SCORE,
+    plasticScore: PLASTIC_SCORE,
+    hydration: HYDRATION,
+    drinkHydrationRate: DRINK_HYDRATION_RATE,
+    dehydrationRate: DEHYDRATION_RATE,
+    minimumTicksToChange: MINIMUM_TICKS_TO_CHANGE,
+    changeRate: CHANGE_RATE,
+  },
   playing: false,
   gameStartTime: Date.now(),
   score: 0,
@@ -37,16 +60,6 @@ const BLANK_STATE: HydrationGameState = {
   ticksSinceChange: 0,
   scores: [],
 }
-
-const TIME = 20000 // starting amount of time
-const TICK = 50 // how often to apply a tick
-const HYDRATION = 100
-const DRINK_HYDRATION_RATE = 10
-const DEHYDRATION_RATE = 0.1
-const REUSABLE_SCORE = 10
-const PLASTIC_SCORE = -10
-const MINIMUM_TICKS_TO_CHANGE = 100
-const CHANGE_RATE = 0.03
 
 // based on hydration, from 0 to HYDRATION, how should REUSABLE_SCORE be modified?
 const getHydrationBonus = (hydration: number): number => {
@@ -127,21 +140,21 @@ export default () => {
         }
 
         const bottle =
-          state.ticksSinceChange < MINIMUM_TICKS_TO_CHANGE
+          state.ticksSinceChange < state.knobs.minimumTicksToChange
             ? state.bottle
-            : Math.random() >= CHANGE_RATE
+            : Math.random() >= state.knobs.changeRate
             ? Bottle.REUSABLE
             : Bottle.PLASTIC
         const scores = state.scores
           .map((o) => ({
             ...o,
-            left: o.left * 1.2,
+            left: o.left * 1.3,
             opacity: o.opacity - 0.03,
           }))
           .filter((o) => o.opacity > 0)
         return {
           ...state,
-          hydration: Math.min(Math.max(state.hydration - DEHYDRATION_RATE, 0), HYDRATION),
+          hydration: Math.min(Math.max(state.hydration - state.knobs.dehydrationRate, 0), state.knobs.hydration),
           bottle,
           ticksSinceChange: bottle === state.bottle ? state.ticksSinceChange + 1 : 0,
           scores,
@@ -157,12 +170,24 @@ export default () => {
 
       if (type === "drink" && state.playing) {
         const thisScore =
-          state.bottle === Bottle.REUSABLE ? REUSABLE_SCORE * getHydrationBonus(state.hydration) : PLASTIC_SCORE
+          state.bottle === Bottle.REUSABLE
+            ? state.knobs.reusableScore * getHydrationBonus(state.hydration)
+            : state.knobs.plasticScore
         return {
           ...state,
-          hydration: state.hydration + DRINK_HYDRATION_RATE,
+          hydration: state.hydration + state.knobs.dehydrationRate,
           score: state.score + thisScore,
           scores: [...state.scores, { id: Date.now(), score: thisScore, bottle: state.bottle, left: 5, opacity: 1 }],
+        }
+      }
+
+      if (type === "knob") {
+        return {
+          ...state,
+          knobs: {
+            ...state.knobs,
+            [payload.knob]: payload.value,
+          },
         }
       }
       return state
@@ -195,8 +220,8 @@ export default () => {
   return (
     <div className="w-full flex flex-col items-center overflow-hidden">
       <div className="m-2">
-        <div className="flex">
-          Hydration Bonus = x
+        <div className="flex pl-0 p-2">
+          <div className="flex-shrink-0 mr-1">Hydration Bonus = x</div>
           <Label color={gameState.hydration <= 50 ? "red" : gameState.hydration <= 70 ? "amber" : "blue"}>
             {getHydrationBonus(gameState.hydration).toFixed(1)}
           </Label>
@@ -207,7 +232,7 @@ export default () => {
         />
       </div>
       <Button
-        className="flex-wrap"
+        className="flex-wrap w-full md:w-1/2"
         buttonType={gameState.playing ? "filled" : "outline"}
         color={gameState.playing ? (gameState.bottle === Bottle.REUSABLE ? "green" : "red") : "gray"}
         onClick={handleOnDrink}
@@ -226,7 +251,7 @@ export default () => {
                 left,
                 opacity,
               }}
-              className="absolute"
+              className="absolute w-[50px]"
             >
               <Label color={bottle === Bottle.REUSABLE ? "blue" : "red"}>
                 {bottle === Bottle.REUSABLE && "+"}
@@ -240,6 +265,26 @@ export default () => {
       <Button className="mt-2" onClick={handleOnGameStart}>
         {gameState.playing ? "Stop" : "Start"}
       </Button>
+      <ScoreHint />
+      <div className="w-full md:w-1/3">
+        <div className="font-medium text-md"> Knobs</div>
+        {[
+          { key: "changeRate", name: "Change Rate", step: 0.01 },
+          { key: "dehydrationRate", name: "Dehydration Rate", step: 0.1 },
+        ].map((o) => (
+          <div key={o.key} className="flex justify-between text-small font-light">
+            <div>{o.name}</div>
+            <input
+              type="number"
+              step={o.step}
+              value={gameState.knobs[o.key]}
+              onChange={(e) => dispatch({ type: "knob", payload: { knob: o.key, value: e.target.value } })}
+              key={o.key}
+              className="w-[80px]"
+            />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -11,18 +11,20 @@ const streamToString = (stream) =>
     stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")))
   })
 
-export const getStaticS3Content = async () => {
-  // Create an Amazon S3 service client object.
-  const s3Client = new S3Client({
-    region: process.env.MY_AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY,
-    },
-  })
+// Create an Amazon S3 service client object.
+const s3Client = new S3Client({
+  region: process.env.MY_AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY,
+  },
+})
 
+const HOME_PAGE_FILES = process.env.HOME_PAGE_FILES.split(",")
+
+export const getStaticHomePageContent = async () => {
   const mdContent = await Promise.all(
-    ["thoughts.md", "info.md"].map(
+    HOME_PAGE_FILES.map(
       (Key) =>
         new Promise(async (resolve, reject) => {
           const bucketParams = {
@@ -50,6 +52,6 @@ export const getStaticS3Content = async () => {
         })
     )
   )
-  console.log("finished!", mdContent)
+
   return { mdContent }
 }
