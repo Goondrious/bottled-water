@@ -37,6 +37,16 @@ const getNextDirection = (dir: Direction): Direction => {
   if (dir === Direction.LEFT) return Direction.UP
 }
 
+type GameObject = {
+  id: string
+  left: number
+  top: number
+  placementOptions: number[]
+  direction: Direction
+  fuckNestleSpawnTimerStart: number
+  bottle: Bottle
+}
+
 type GameState = {
   playing: boolean
   gameStartTime: number
@@ -47,7 +57,7 @@ type GameState = {
   bottleScores: any[]
   direction: Direction
   directionTimerStart: number
-  objects: any
+  objects: { [k: string]: GameObject }
   fuckNestle: boolean
   fuckNestleTimerStart: number
   fuckNestleSpawnTimerStart: number
