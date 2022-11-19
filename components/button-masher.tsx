@@ -175,7 +175,7 @@ export default () => {
             : state.knobs.plasticScore
         return {
           ...state,
-          hydration: state.hydration + state.knobs.dehydrationRate,
+          hydration: state.hydration + DRINK_HYDRATION_RATE,
           score: state.score + thisScore,
           scores: [...state.scores, { id: Date.now(), score: thisScore, bottle: state.bottle, left: 5, opacity: 1 }],
         }
@@ -278,7 +278,7 @@ export default () => {
               type="number"
               step={o.step}
               value={gameState.knobs[o.key]}
-              onChange={(e) => dispatch({ type: "knob", payload: { knob: o.key, value: e.target.value } })}
+              onChange={(e) => dispatch({ type: "knob", payload: { knob: o.key, value: parseFloat(e.target.value) } })}
               key={o.key}
               className="w-[80px]"
             />
